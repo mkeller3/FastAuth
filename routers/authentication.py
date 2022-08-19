@@ -1,5 +1,4 @@
 import jwt
-from pydantic import BaseModel
 from passlib.hash import bcrypt
 from tortoise.contrib.fastapi import HTTPNotFoundError
 from fastapi import APIRouter, HTTPException, Depends, status
@@ -11,11 +10,6 @@ import models
 import utilities
 
 router = APIRouter()
-
-class Status(BaseModel):
-    message: str
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl='token')
 
 @router.post('/token')
 async def generate_token(form_data: OAuth2PasswordRequestForm = Depends()):
@@ -54,9 +48,9 @@ async def update_user(user: models.UserIn_Pydantic, user_id: int=Depends(utiliti
     await db_models.User.filter(id=user_id).update(**user.dict(exclude_unset=True))
     return await models.User_Pydantic.from_queryset_single(db_models.User.get(id=user_id))
 
-@router.delete("/user/", response_model=Status, responses={404: {"model": HTTPNotFoundError}}, dependencies=[Depends(utilities.get_token_header)])
+@router.delete("/user/", response_model=models.Status, responses={404: {"model": HTTPNotFoundError}}, dependencies=[Depends(utilities.get_token_header)])
 async def delete_user(user_id: int=Depends(utilities.get_token_header)):
     deleted_count = await db_models.User.filter(id=user_id).delete()
     if not deleted_count:
         raise HTTPException(status_code=404, detail=f"User {user_id} not found")
-    return Status(message=f"Deleted user {user_id}")
+    return models.Status(message=f"Deleted user {user_id}")
